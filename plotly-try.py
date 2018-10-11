@@ -1,4 +1,6 @@
-#import plotly.plotly as py
+#import plotly
+#plotly.tools.set_credentials_file(username='javergara91', api_key='Llvb5mN307uK7RoEWjv0')
+
 import pandas as pd
 from plotly.offline import download_plotlyjs, init_notebook_mode, plot, iplot
 import plotly.graph_objs as go
