@@ -19,6 +19,7 @@ np.random.seed(19680801)
 
 x = np.random.sample(20 * len(colors))
 y = np.random.sample(20 * len(colors))
+print (x)
 c_list = []
 for c in colors:
     c_list.extend([c] * 20)

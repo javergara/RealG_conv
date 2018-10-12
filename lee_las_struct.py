@@ -106,7 +106,7 @@ def read_packets_las(packet,mapa):
 	'''
 	return las_values
 
-"""
+
 def main():
 	file_las = ('nube_convocatoria.las')
 	las_file = open(file_las,'rb')
@@ -115,6 +115,8 @@ def main():
 	las_values = read_packets_las(414912,mapa_las) #se solicitan los datos del packet 0 del archivo de nube de puntos
 	print("valores en el primer paquete del archivo nube_convocatoria.las")
 	print(las_values)
+	print("xxxx")
+	print(las_values['x'])
 	las_values = read_packets_las(1,mapa_las) #se solicitan los datos del packet 1 del archivo de nube de puntos
 	print("valores en el segundo paquete del archivo nube_convocatoria.las")
 	print(las_values)
@@ -124,20 +126,49 @@ def main():
 	subset = mapa_las[ 107 : 111 ]
 	values = struct.unpack('<L', subset)
 	print("numero de registro de puntos dentro del archivo : ",values)
-	'''
-	la cantidad de puntos totales en el archivo "las" se puede conocer de manera indirecta
-	dado que el archivo despues de los 227 bytes del header se repite la estrutura del formato 1
-	de longitud 28 bytes hasta el final del archivo y por cada paquete solo se tiene un punto.
+	x=[]
+	y=[]
+	z=[]
+	for i in range((num_datagrams(mapa_las,28,227))):
 
-	la funcion "num_datagrams(data,datagram_size ,rest=0)" retorna la cantidad de paquetes
-	data = mapa_las
-	datagram_size = 28 # longitud del paquete
-	rest = 227 # si no se le ingresa el valor por defecto es cero, pero en este
-			   # caso daria error ya que no se contarian los 227 bytes del header
-
+		las_values = read_packets_las(i,mapa_las)
+		x.append(las_values['x'])
+		y.append(las_values['y'])
+		z.append(las_values['z'])
 
 
-	'''
+
+	from mpl_toolkits.mplot3d import Axes3D
+	import matplotlib.pyplot as plt
+	import numpy as np
+
+
+	def randrange(n, vmin, vmax):
+	    '''
+	    Helper function to make an array of random numbers having shape (n, )
+	    with each number distributed Uniform(vmin, vmax).
+	    '''
+	    return (vmax - vmin)*np.random.rand(n) + vmin
+
+	fig = plt.figure()
+	ax = fig.add_subplot(111, projection='3d')
+
+	n = 100
+
+	# For each set of style and range settings, plot n random points in the box
+	# defined by x in [23, 32], y in [0, 100], z in [zlow, zhigh].
+	#for c, m, zlow, zhigh in [('r', 'o', -50, -25), ('b', '^', -30, -5)]:
+	 #  xs = randrange(n, 23, 32)
+	  #  ys = randrange(n, 0, 100)
+	  #  zs = randrange(n, zlow, zhigh)
+	ax.scatter(x, y, z, marker= 'o')
+
+	ax.set_xlabel('X Label')
+	ax.set_ylabel('Y Label')
+	ax.set_zlabel('Z Label')
+
+	plt.show()
+
 
 if __name__=='__main__':
-	main() """
+	main()
