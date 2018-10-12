@@ -9,7 +9,7 @@ import binascii
 
 def num_datagrams(data,datagram_size ,rest=0):
 	longi = len(data)-rest
-	assert(longi%datagram_size== 0)
+	#assert(longi%datagram_size== 0)
 	return int(longi / datagram_size)
 
 def estructura_las(value):
@@ -69,8 +69,8 @@ def read_packets_las(packet,mapa):
 		numdeco = 2
 	'''
 	if packet >= 0:
-		offset = 227 + (27*(packet))
-		datagram_size = 27
+		offset = 227 + (28*(packet))
+		datagram_size = 28
 		numdeco = 1
 	else:
 		print("error en dato block función read_packets_las")
@@ -83,7 +83,7 @@ def read_packets_las(packet,mapa):
 	subset = mapa[ 131 :  155 ]
 	values = struct.unpack('<3d', subset)
 	escala_values = dict(list(zip (coordenadas_xyz , values)))
-	#busco en el header los factores de escala de xyz
+	#busco en el header los factores de offset de xyz
 	subset = mapa[ 155 :  179 ]
 	values = struct.unpack('<3d', subset)
 	offset_values = dict(list(zip (coordenadas_xyz , values)))
@@ -106,20 +106,20 @@ def read_packets_las(packet,mapa):
 	'''
 	return las_values
 
-
+"""
 def main():
 	file_las = ('nube_convocatoria.las')
 	las_file = open(file_las,'rb')
 	las_size = os.path.getsize(file_las)
 	mapa_las = mmap.mmap(las_file.fileno(),las_size, access=mmap.ACCESS_READ)
-	las_values = read_packets_las(0,mapa_las) #se solicitan los datos del packet 0 del archivo de nube de puntos
+	las_values = read_packets_las(414912,mapa_las) #se solicitan los datos del packet 0 del archivo de nube de puntos
 	print("valores en el primer paquete del archivo nube_convocatoria.las")
 	print(las_values)
 	las_values = read_packets_las(1,mapa_las) #se solicitan los datos del packet 1 del archivo de nube de puntos
 	print("valores en el segundo paquete del archivo nube_convocatoria.las")
 	print(las_values)
 	print("-------numero de puntos en el las---------------------")
-	print(num_datagrams(mapa_las,27,227))
+	print(num_datagrams(mapa_las,28,227))
 	print("-------confirmo resultado leyendo el archivo directamente---------")
 	subset = mapa_las[ 107 : 111 ]
 	values = struct.unpack('<L', subset)
@@ -140,4 +140,4 @@ def main():
 	'''
 
 if __name__=='__main__':
-	main()
+	main() """

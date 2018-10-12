@@ -14,6 +14,15 @@ size_txt_prueba = os.path.getsize(txt_prueba )
 mapa_prueba = mmap.mmap(file_txt_prueba.fileno(),size_txt_prueba, access=mmap.ACCESS_READ)
 print("-----------algunos valores leido del header del archivo .las-----------")
 print("-----------------------------------------------------------------------")
+print("***********************************************************************")
+print("offset points")
+#subset = mapa_prueba[3:4]
+#values = struct.unpack('<c', subset)#*0.001
+
+subset = mapa_prueba[96:100]
+values = struct.unpack('<L', subset)#*0.001
+print("valor de offset: ",values)
+
 print("-------------------------longitud del header---------------------------")
 print("valor de x: ",bytearray(mapa_prueba[94:96]))
 subset = mapa_prueba[94:96]
