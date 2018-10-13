@@ -129,14 +129,14 @@ def main():
 	x=[]
 	y=[]
 	z=[]
-	for i in range((num_datagrams(mapa_las,28,227))):
-
+	#for i in range((num_datagrams(mapa_las,28,227))):
+	for i in range(1000):
 		las_values = read_packets_las(i,mapa_las)
 		x.append(las_values['x'])
 		y.append(las_values['y'])
 		z.append(las_values['z'])
 
-
+	print('termino for')
 
 	from mpl_toolkits.mplot3d import Axes3D
 	import matplotlib.pyplot as plt
