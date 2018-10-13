@@ -1,23 +1,26 @@
+
 import numpy as np
 from open3d import *
 
-print("Load a ply point cloud, print it, and render it")
-pcd = read_point_cloud("point_dense_cloud.ply")
-print(pcd)
-print(np.asarray(pcd.points))
-draw_geometries([pcd])
+if __name__ == "__main__":
 
-print("Downsample the point cloud with a voxeldense_ of 0.05")
-downpcd = voxel_down_sample(pcd, voxel_size = 0.05)
-draw_geometries([downpcd])
+    print("Load a ply point cloud, print it, and render it")
+    pcd = read_point_cloud("point_dense_cloud.ply")
+    print(pcd)
+    print(np.asarray(pcd.points))
+    draw_geometries([pcd])
 
-print("Recompute the normal of the downsampled point cloud")
-estimate_normals(downpcd, search_param = KDTreeSearchParamHybrid(
-        radius = 0.1, max_nn = 30))
-draw_geometries([downpcd])
+    print("Downsample the point cloud with a voxel of 0.05")
+    downpcd = voxel_down_sample(pcd, voxel_size = 0.05)
+    draw_geometries([downpcd])
 
-print("Print a normal vector of the 0th point")
-print(downpcd.normals[0])
-print("Print the normal vectors of the first 10 points")
-print(np.asarray(downpcd.normals)[:10,:])
-print("")
+    print("Recompute the normal of the downsampled point cloud")
+    estimate_normals(downpcd, search_param = KDTreeSearchParamHybrid(
+            radius = 0.1, max_nn = 30))
+    draw_geometries([downpcd])
+
+    print("Print a normal vector of the 0th point")
+    print(downpcd.normals[0])
+    print("Print the normal vectors of the first 10 points")
+    print(np.asarray(downpcd.normals)[:10,:])
+    print("")
