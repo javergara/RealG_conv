@@ -1,3 +1,5 @@
+import sys
+from PyQt5 import uic, QtWidgets
 import math, struct
 import os, mmap
 import numpy
@@ -103,8 +105,8 @@ def read_packets_las(packet,mapa):
 	data_point = [las_values['x'],las_values['y'],las_values['z']]
 	return data_point
 
-@count_elapsed_time
-def points_matrix():
+#@count_elapsed_time
+def points_matrix(mapa_las):
 	"""
 	Returns a matrix:
 	Matrix = [[x_1,y_1,z_1],...,[x_n, y_n, z_n]] , n= total points
@@ -113,7 +115,7 @@ def points_matrix():
 	range(0,num_datagrams(mapa_las,28,227))
 
 	"""
-	matrix=([read_packets_las(i,mapa_las) for i in range(0,30000000)])
+	matrix=([read_packets_las(i,mapa_las) for i in range(0,100000)])
 	return matrix
 
 def dibujar(matrix):
@@ -121,19 +123,40 @@ def dibujar(matrix):
 	pcd = PointCloud()
 	pcd.points = (xyz)
 	downpcd = voxel_down_sample(pcd, voxel_size = 5)
-	draw_geometries([downpcd])
-	#draw_geometries([pcd])
+	#draw_geometries([downpcd])
+	draw_geometries([pcd])
+
+
+
+qtCreatorFile = "rg.ui" # Nombre del archivo aquí.
+
+Ui_MainWindow, QtBaseClass = uic.loadUiType(qtCreatorFile)
+
+class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
+    def __init__(self):
+        QtWidgets.QMainWindow.__init__(self)
+        Ui_MainWindow.__init__(self)
+        self.setupUi(self)
+        self.pushButton.clicked.connect(self.execute)
+    def execute(self):
+        direccion = (self.file_address.toPlainText())
+        print(direccion)
+        start_time = time()
+        file_las = (direccion)
+        las_file = open(file_las,'rb')
+        las_size = os.path.getsize(file_las)
+        mapa_las = mmap.mmap(las_file.fileno(),las_size, access=mmap.ACCESS_READ)
+        n_points = str(num_datagrams(mapa_las,28,227))
+        self.total_points.setText(n_points)
+        matrix= points_matrix(mapa_las)
+        elapsed_time = time() - start_time
+        print("Elapsed time: %.10f seconds." % elapsed_time)
+        dibujar(matrix)
 
 
 if __name__ == "__main__":
-	file_las = ('nube_convocatoria.las')
-	las_file = open(file_las,'rb')
-	las_size = os.path.getsize(file_las)
-	mapa_las = mmap.mmap(las_file.fileno(),las_size, access=mmap.ACCESS_READ)
-	las_values = read_packets_las(414912,mapa_las) #se solicitan los datos del packet 0 del archivo de nube de puntos
 
-	print("-------numero de puntos en el las---------------------")
-	print(num_datagrams(mapa_las,28,227))
-
-	matrix= points_matrix()
-	dibujar(matrix)
+    app =  QtWidgets.QApplication(sys.argv)
+    window = MyApp()
+    window.show()
+    sys.exit(app.exec_())

@@ -8,9 +8,10 @@ import array
 import binascii
 from plotly.offline import download_plotlyjs, init_notebook_mode, plot, iplot
 import plotly.graph_objs as go
+
 import numpy as np
+
 from time import time
-from open3d import *
 
 def count_elapsed_time(f):
     """
@@ -31,6 +32,7 @@ def count_elapsed_time(f):
     return wrapper
 
 
+
 def num_datagrams(data,datagram_size ,rest=0):
 	longi = len(data)-rest
 	#assert(longi%datagram_size== 0)
@@ -40,6 +42,12 @@ def estructura_las(value):
 	if value == 1:
 		file_las = ('x','y','z','intensidd','4en1',\
 			'clasificacion','anguloescaneo','userdata','#punto','gpstime')
+	elif value == 2:
+		'''
+		en este espacio pueden agregar para leer algunos datos del "header" si gustan
+		pero por tiempo recomiendo leer los datos que neceten de la forma en que se encuentra
+		en el script (leyendo_archivo_binario.py)
+		'''
 	else:
 		print("Error en el valor de entrada de la función estructura_las")
 	return file_las
@@ -63,11 +71,29 @@ def deco_las(value):
 		point sourse ID -------------------------- file_las['#punto'] --------H
 		GPS time --------------------------------- file_las['gpstime'] -------d
 		'''
+	elif value == 2:
+		'''
+		en este espacio agregan la estructura en bytes para leer el header si lo requieren, pero nuevamente recomiendo
+		leer los datos del header como en el script (leyendo_archivo_binario.py) por temas de tiempo. pero si desean leerlo
+		como el resto del archivo recomiendo utilizar como referencia la tabla mostrada en
+		https://docs.python.org/3.4/library/struct.html#struct.error
+		'''
 	else:
 		print("Error en el valor ingresado a deco_las")
 	return decobytes
 
 def read_packets_las(packet,mapa):
+	'''
+	si desean agregar la lectura del header seria de esta forma
+	if packet >= 1: # tener en cuenta que el primer packete en la numeracion interna (point sourse ID) es cero
+		offset = 227 + (28*(packet))
+		datagram_size = 28
+		numdeco = 1
+	elif packet == 0:
+		offset =0
+		datagram_size = 227
+		numdeco = 2
+	'''
 	if packet >= 0:
 		offset = 227 + (28*(packet))
 		datagram_size = 28
@@ -99,41 +125,54 @@ def read_packets_las(packet,mapa):
 	las_values['y'] = las_values['y'] + offset_values['y']
 	#le suma a z su respectivo offset
 	las_values['z'] = las_values['z'] + offset_values['z']
-
-	data_point = [las_values['x'],las_values['y'],las_values['z']]
-	return data_point
-
-@count_elapsed_time
-def points_matrix():
-	"""
-	Returns a matrix:
-	Matrix = [[x_1,y_1,z_1],...,[x_n, y_n, z_n]] , n= total points
-
-	For getting the total amount of points the parameter in the for cycle is:
-	range(0,num_datagrams(mapa_las,28,227))
-
-	"""
-	matrix=([read_packets_las(i,mapa_las) for i in range(0,30000000)])
-	return matrix
-
-def dibujar(matrix):
-	xyz=Vector3dVector(matrix)
-	pcd = PointCloud()
-	pcd.points = (xyz)
-	downpcd = voxel_down_sample(pcd, voxel_size = 5)
-	draw_geometries([downpcd])
-	#draw_geometries([pcd])
+	'''
+	si requieren algun dato del header aconsejo leerlo como en este script se leen los offset y
+	los factores de escala ya que de leer el header como se leen los packets tomaria muhco tiempo
+	en implementar
+	'''
+	return las_values
 
 
-if __name__ == "__main__":
-	file_las = ('nube_convocatoria.las')
-	las_file = open(file_las,'rb')
-	las_size = os.path.getsize(file_las)
-	mapa_las = mmap.mmap(las_file.fileno(),las_size, access=mmap.ACCESS_READ)
-	las_values = read_packets_las(414912,mapa_las) #se solicitan los datos del packet 0 del archivo de nube de puntos
 
-	print("-------numero de puntos en el las---------------------")
-	print(num_datagrams(mapa_las,28,227))
+file_las = ('nube_convocatoria.las')
+las_file = open(file_las,'rb')
+las_size = os.path.getsize(file_las)
+mapa_las = mmap.mmap(las_file.fileno(),las_size, access=mmap.ACCESS_READ)
+las_values = read_packets_las(414912,mapa_las) #se solicitan los datos del packet 0 del archivo de nube de puntos
+print("valores en el primer paquete del archivo nube_convocatoria.las")
+print(las_values)
+print("xxxx")
+print(las_values['x'])
+las_values = read_packets_las(1,mapa_las) #se solicitan los datos del packet 1 del archivo de nube de puntos
+print("valores en el segundo paquete del archivo nube_convocatoria.las")
+print(las_values)
+print("-------numero de puntos en el las---------------------")
+print(num_datagrams(mapa_las,28,227))
+print("-------confirmo resultado leyendo el archivo directamente---------")
+subset = mapa_las[ 107 : 111 ]
+values = struct.unpack('<L', subset)
+print("numero de registro de puntos dentro del archivo : ",values)
 
-	matrix= points_matrix()
-	dibujar(matrix)
+start_time = time()
+x=[]
+y=[]
+z=[]
+#for i in range((num_datagrams(mapa_las,28,227))):
+for i in range(0,36478801,100000):
+	las_values = read_packets_las(i,mapa_las)
+	x.append(las_values['x'])
+	y.append(las_values['y'])
+	z.append(las_values['z'])
+
+print('termino for test2')
+elapsed_time = time() - start_time
+print("Elapsed time: %.10f seconds." % elapsed_time)
+from open3d import *
+xyz = np.zeros((np.size(x),3))
+xyz[:,0] = np.reshape(x,-1)
+xyz[:,1] = np.reshape(y,-1)
+xyz[:,2] = np.reshape(z,-1)
+xyz=Vector3dVector(xyz)
+pcd = PointCloud()
+pcd.points = (xyz)
+draw_geometries([pcd])

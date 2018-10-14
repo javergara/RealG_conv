@@ -1,3 +1,6 @@
+import copy
+import numpy as np
+from open3d import *
 import math, struct
 import os, mmap
 import numpy
@@ -12,22 +15,22 @@ import numpy as np
 from time import time
 
 def count_elapsed_time(f):
-    """
-    Decorator.
-    Execute the function and calculate the elapsed time.
-    Print the result to the standard output.
-    """
-    def wrapper():
-        # Start counting.
-        start_time = time()
-        # Take the original function's return value.
-        ret = f()
-        # Calculate the elapsed time.
-        elapsed_time = time() - start_time
-        print("Elapsed time: %0.10f seconds." % elapsed_time)
-        return ret
+	"""
+	Decorator.
+	Execute the function and calculate the elapsed time.
+	Print the result to the standard output.
+	"""
+	def wrapper():
+		# Start counting.
+		start_time = time()
+		# Take the original function's return value.
+		ret = f()
+		# Calculate the elapsed time.
+		elapsed_time = time() - start_time
+		print("Elapsed time: %0.10f seconds." % elapsed_time)
+		return ret
 
-    return wrapper
+	return wrapper
 
 
 def num_datagrams(data,datagram_size ,rest=0):
@@ -87,6 +90,7 @@ def read_packets_las(packet,mapa):
 	values = struct.unpack('<3d', subset)
 	offset_values = dict(list(zip (coordenadas_xyz , values)))
 	#multiplico x por su factor de escala
+
 	las_values['x'] = las_values['x'] * escala_values['x']
 	#multiplico y por su factor de escala
 	las_values['y'] = las_values['y'] * escala_values['y']
@@ -99,8 +103,8 @@ def read_packets_las(packet,mapa):
 	#le suma a z su respectivo offset
 	las_values['z'] = las_values['z'] + offset_values['z']
 
-	data_point = np.array([las_values['x'],las_values['y'],las_values['z']])
-
+	#data_point = np.array([las_values['x'],las_values['y'],las_values['z']])
+	data_point = [las_values['x'],las_values['y'],las_values['z']]
 	return data_point
 
 file_las = ('nube_convocatoria.las')
@@ -113,38 +117,27 @@ print(las_values)
 print("-------numero de puntos en el las---------------------")
 print(num_datagrams(mapa_las,28,227))
 
-
-#36478801
-
-@count_elapsed_time
-def test():
-	matriz = np.matrix([(read_packets_las(i,mapa_las)) for i in range(0,10000000)])
-	print('termino for test1(rapido)')
+def test1():
+	#for i in range((num_datagrams(mapa_las,28,227))):
+	matriz=([read_packets_las(i,mapa_las) for i in range(0,10000000)])
 	return matriz
-test()
+# 36478801
 
-"""
-trace1 = go.Scatter3d(
-    x=x,
-    y=y,
-    z=z,
-    mode='markers',
-    marker=dict(
-        size=2,
-        #color=z,                # set color to an array/list of desired values
-        #colorscale='Viridis',   # choose a colorscale
-        opacity=0.8
-    )
-)
+#@count_elapsed_time
+def test():
+	matriz = np.append([(read_packets_las(i,mapa_las)) for i in range(0,1000)])
+	#xyz=Vector3dVector(matriz)
+	#xyz= Vector3dVector(matriz)
+	#print('termino for test1(rapido)')
+	print (matriz)
+	return matriz
 
-data = [trace1]
-layout = go.Layout(
-    margin=dict(
-        l=0,
-        r=0,
-        b=0,
-        t=0
-    )
-)
-fig = go.Figure(data=data, layout=layout)
-plot(fig, filename='3d-scatter-colorscale')"""
+xyz= test1()
+xyz=Vector3dVector(xyz)
+pcd = PointCloud()
+pcd.points = (xyz)
+# Pass xyz to Open3D.PointCloud and visualize
+#pcd = PointCloud()
+#pcd.points = (test())
+
+draw_geometries([pcd])
