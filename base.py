@@ -11,24 +11,134 @@ import plotly.graph_objs as go
 import numpy as np
 from time import time
 from open3d import *
+################################################################################
+import matplotlib.pyplot as plt
 
+def custom_draw_geometry(pcd):
+	# The following code achieves the same effect as:
+	# draw_geometries([pcd])
+	vis = Visualizer()
+	vis.create_window()
+	vis.add_geometry(pcd)
+	vis.run()
+	vis.destroy_window()
+
+def custom_draw_geometry_with_custom_fov(pcd, fov_step):
+	vis = Visualizer()
+	vis.create_window()
+	vis.add_geometry(pcd)
+	ctr = vis.get_view_control()
+	print("Field of view (before changing) %.2f" % ctr.get_field_of_view())
+	ctr.change_field_of_view(step = fov_step)
+	print("Field of view (after changing) %.2f" % ctr.get_field_of_view())
+	vis.run()
+	vis.destroy_window()
+
+def custom_draw_geometry_with_rotation(pcd):
+	def rotate_view(vis):
+		ctr = vis.get_view_control()
+		ctr.rotate(10.0, 0.0)
+		return False
+	draw_geometries_with_animation_callback([pcd], rotate_view)
+
+def custom_draw_geometry_load_option(pcd):
+	vis = Visualizer()
+	vis.create_window()
+	vis.add_geometry(pcd)
+	vis.get_render_option().load_from_json(
+			"../../TestData/renderoption.json")
+	vis.run()
+	vis.destroy_window()
+
+def custom_draw_geometry_with_key_callback(pcd):
+	def change_background_to_black(vis):
+		opt = vis.get_render_option()
+		opt.background_color = np.asarray([0, 0, 0])
+		return False
+	def load_render_option(vis):
+		vis.get_render_option().load_from_json(
+				"../../TestData/renderoption.json")
+		return False
+	def capture_depth(vis):
+		depth = vis.capture_depth_float_buffer()
+		plt.imshow(np.asarray(depth))
+		plt.show()
+		return False
+	def capture_image(vis):
+		image = vis.capture_screen_float_buffer()
+		plt.imshow(np.asarray(image))
+		plt.show()
+		return False
+	key_to_callback = {}
+	key_to_callback[ord("K")] = change_background_to_black
+	key_to_callback[ord("R")] = load_render_option
+	key_to_callback[ord(",")] = capture_depth
+	key_to_callback[ord(".")] = capture_image
+	draw_geometries_with_key_callbacks([pcd], key_to_callback)
+
+def custom_draw_geometry_with_camera_trajectory(pcd):
+	custom_draw_geometry_with_camera_trajectory.index = -1
+	custom_draw_geometry_with_camera_trajectory.trajectory =\
+			read_pinhole_camera_trajectory(
+					"../../TestData/camera_trajectory.json")
+	custom_draw_geometry_with_camera_trajectory.vis = Visualizer()
+	if not os.path.exists("../../TestData/image/"):
+		os.makedirs("../../TestData/image/")
+	if not os.path.exists("../../TestData/depth/"):
+		os.makedirs("../../TestData/depth/")
+	def move_forward(vis):
+		# This function is called within the Visualizer::run() loop
+		# The run loop calls the function, then re-render
+		# So the sequence in this function is to:
+		# 1. Capture frame
+		# 2. index++, check ending criteria
+		# 3. Set camera
+		# 4. (Re-render)
+		ctr = vis.get_view_control()
+		glb = custom_draw_geometry_with_camera_trajectory
+		if glb.index >= 0:
+			print("Capture image {:05d}".format(glb.index))
+			depth = vis.capture_depth_float_buffer(False)
+			image = vis.capture_screen_float_buffer(False)
+			plt.imsave("../../TestData/depth/{:05d}.png".format(glb.index),\
+					np.asarray(depth), dpi = 1)
+			plt.imsave("../../TestData/image/{:05d}.png".format(glb.index),\
+					np.asarray(image), dpi = 1)
+			#vis.capture_depth_image("depth/{:05d}.png".format(glb.index), False)
+			#vis.capture_screen_image("image/{:05d}.png".format(glb.index), False)
+		glb.index = glb.index + 1
+		if glb.index < len(glb.trajectory.extrinsic):
+			ctr.convert_from_pinhole_camera_parameters(glb.trajectory.intrinsic,\
+					glb.trajectory.extrinsic[glb.index])
+		else:
+			custom_draw_geometry_with_camera_trajectory.vis.\
+					register_animation_callback(None)
+		return False
+	vis = custom_draw_geometry_with_camera_trajectory.vis
+	vis.create_window()
+	vis.add_geometry(pcd)
+	vis.get_render_option().load_from_json("../../TestData/renderoption.json")
+	vis.register_animation_callback(move_forward)
+	vis.run()
+	vis.destroy_window()
+#######################################################################
 def count_elapsed_time(f):
-    """
-    Decorator.
-    Execute the function and calculate the elapsed time.
-    Print the result to the standard output.
-    """
-    def wrapper():
-        # Start counting.
-        start_time = time()
-        # Take the original function's return value.
-        ret = f()
-        # Calculate the elapsed time.
-        elapsed_time = time() - start_time
-        print("Elapsed time: %0.10f seconds." % elapsed_time)
-        return ret
+	"""
+	Decorator.
+	Execute the function and calculate the elapsed time.
+	Print the result to the standard output.
+	"""
+	def wrapper():
+		# Start counting.
+		start_time = time()
+		# Take the original function's return value.
+		ret = f()
+		# Calculate the elapsed time.
+		elapsed_time = time() - start_time
+		print("Elapsed time: %0.10f seconds." % elapsed_time)
+		return ret
 
-    return wrapper
+	return wrapper
 
 
 def num_datagrams(data,datagram_size ,rest=0):
@@ -113,7 +223,7 @@ def points_matrix():
 	range(0,num_datagrams(mapa_las,28,227))
 
 	"""
-	matrix=([read_packets_las(i,mapa_las) for i in range(0,30000000)])
+	matrix=([read_packets_las(i,mapa_las) for i in range(0,36000000,10000)])
 	return matrix
 
 def dibujar(matrix):
@@ -121,9 +231,11 @@ def dibujar(matrix):
 	pcd = PointCloud()
 	pcd.points = (xyz)
 	downpcd = voxel_down_sample(pcd, voxel_size = 5)
-	draw_geometries([downpcd])
+	#draw_geometries([downpcd])
 	#draw_geometries([pcd])
-
+	mesh_frame = create_mesh_coordinate_frame(size = 60, origin = [665004.83, 454351.78, 349.61])
+	draw_geometries([pcd , mesh_frame])
+	#custom_draw_geometry_with_key_callback(pcd)
 
 if __name__ == "__main__":
 	file_las = ('nube_convocatoria.las')
@@ -131,7 +243,7 @@ if __name__ == "__main__":
 	las_size = os.path.getsize(file_las)
 	mapa_las = mmap.mmap(las_file.fileno(),las_size, access=mmap.ACCESS_READ)
 	las_values = read_packets_las(414912,mapa_las) #se solicitan los datos del packet 0 del archivo de nube de puntos
-
+	print(las_values)
 	print("-------numero de puntos en el las---------------------")
 	print(num_datagrams(mapa_las,28,227))
 
