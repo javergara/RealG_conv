@@ -127,10 +127,11 @@ def dibujar(matrix,flag):
 
 		#("Every 5th points are selected")
 		uni_down_pcd = uniform_down_sample(pcd, every_k_points = 5)
-
+		mesh_frame = create_mesh_coordinate_frame(size = 60, origin = [664804.83, 454351.78, 349.61])
+		draw_geometries([pcd , mesh_frame])
 	elif flag == 1:
 		pcd = read_point_cloud(matrix)
-	draw_geometries([pcd])
+		draw_geometries([pcd])
 
 
 
