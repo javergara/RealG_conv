@@ -8,24 +8,6 @@ import array
 import binascii
 import os, mmap
 
-def count_elapsed_time(f):
-	"""
-	Decorator.
-	Execute the function and calculate the elapsed time.
-	Print the result to the standard output.
-	"""
-	def wrapper():
-		# Start counting.
-		start_time = time()
-		# Take the original function's return value.
-		ret = f()
-		# Calculate the elapsed time.
-		elapsed_time = time() - start_time
-		print("Elapsed time: %0.10f seconds." % elapsed_time)
-		return ret
-
-	return wrapper
-
 
 def num_datagrams(data,datagram_size ,rest=0):
 	longi = len(data)-rest
@@ -34,15 +16,16 @@ def num_datagrams(data,datagram_size ,rest=0):
 
 def estructura_las(value):
 	if value == 1:
-		file_las = ('x','y','z','intensidd','4en1',\
-			'clasificacion','anguloescaneo','userdata','#punto','gpstime')
+		#file_las = ('x','y','z','intensidd','4en1','clasificacion','anguloescaneo','userdata','#punto','gpstime')
+		file_las = ('x','y','z')
 	else:
 		print("Error en el valor de entrada de la función estructura_las")
 	return file_las
 
 def deco_las(value):
 	if value == 1:
-		decobytes = '<lllHbBBBHd'
+		#decobytes = '<lllHbBBBHd'
+		decobytes = '<lll'
 		'''
 		POINT DATA RECORD FORMAT 1:
 		x ---------------------------------------- file_las['x'] -------------l
@@ -63,10 +46,10 @@ def deco_las(value):
 		print("Error en el valor ingresado a deco_las")
 	return decobytes
 
-def read_packets_las(packet,mapa):
+def read_packets_las(packet,mapa, esc_x, esc_y, esc_z, offset_x, offset_y, offset_z):
 	if packet >= 0:
 		offset = 227 + (28*(packet))
-		datagram_size = 28
+		datagram_size = 12
 		numdeco = 1
 	else:
 		print("error en dato block función read_packets_las")
@@ -74,28 +57,14 @@ def read_packets_las(packet,mapa):
 	subset = mapa[ offset :  offset + datagram_size ]
 	values = struct.unpack(deco_las(numdeco), subset)
 	las_values = dict(list(zip (estructura_las(numdeco) , values)))
-	#busco en el header los factores de escala de xyz
-	coordenadas_xyz = ('x','y','z')
-	subset = mapa[ 131 :  155 ]
-	values = struct.unpack('<3d', subset)
-	escala_values = dict(list(zip (coordenadas_xyz , values)))
-	#busco en el header los factores de offset de xyz
-	subset = mapa[ 155 :  179 ]
-	values = struct.unpack('<3d', subset)
-	offset_values = dict(list(zip (coordenadas_xyz , values)))
-	#multiplico x por su factor de escala
-	las_values['x'] = las_values['x'] * escala_values['x']
-	#multiplico y por su factor de escala
-	las_values['y'] = las_values['y'] * escala_values['y']
-	#multiplico z por su factor de escala
-	las_values['z'] = las_values['z'] * escala_values['z']
-	#le suma a x su respectivo offset
-	las_values['x'] = las_values['x'] + offset_values['x']
-	#le suma a y su respectivo offset
-	las_values['y'] = las_values['y'] + offset_values['y']
-	#le suma a z su respectivo offset
-	las_values['z'] = las_values['z'] + offset_values['z']
 
+	#multiplico x por su factor de escala
+	las_values['x'] = (las_values['x'] * esc_x) + offset_x
+	#multiplico y por su factor de escala
+	las_values['y'] = (las_values['y'] * esc_y) + offset_y
+	#multiplico z por su factor de escala
+	las_values['z'] = (las_values['z']  * esc_z) + offset_z
+	#le suma a x su respectivo offset
 	data_point = [las_values['x'],las_values['y'],las_values['z']]
 	return data_point
 
@@ -105,12 +74,28 @@ def points_matrix(mapa_las, n_points):
 	Returns a matrix:
 	Matrix = [[x_1,y_1,z_1],...,[x_n, y_n, z_n]] , n= total points
 	"""
+	#busco en el header los factores de escala de xyz
+	coordenadas_xyz = ('x','y','z')
+	subset = mapa_las[ 131 :  155 ]
+	values = struct.unpack('<3d', subset)
+	escala_values = dict(list(zip (coordenadas_xyz , values)))
+	esc_x= escala_values['x']
+	esc_y= escala_values['y']
+	esc_z= escala_values['z']
+	#busco en el header los factores de offset de xyz
+	subset = mapa_las[ 155 :  179 ]
+	values = struct.unpack('<3d', subset)
+	offset_values = dict(list(zip (coordenadas_xyz , values)))
+	offset_x= offset_values['x']
+	offset_y= offset_values['y']
+	offset_z= offset_values['z']
+
 	total_points = num_datagrams(mapa_las,28,227)
 	if n_points <= total_points:
 		step = int(total_points/n_points)
-		matrix=([read_packets_las(i,mapa_las) for i in range(0,total_points, step)])
+		matrix=([read_packets_las(i,mapa_las, esc_x, esc_y, esc_z, offset_x, offset_y, offset_z) for i in range(0,total_points, step)])
 	else:
-		matrix=([read_packets_las(i,mapa_las) for i in range(0,total_points)])
+		matrix=([read_packets_las(i,mapa_las, esc_x, esc_y, esc_z, offset_x, offset_y, offset_z) for i in range(0,total_points)])
 	return matrix
 
 def dibujar(matrix,flag):
